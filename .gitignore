@@ -1,0 +1,13 @@
+# Spotify credentials and authorization
+.spotify_cache
+.spotify_cache*
+.env
+*.token
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# Local configuration
+config.json
