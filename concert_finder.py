@@ -151,6 +151,16 @@ matches = sorted(
     key=lambda e: e.get("date") or ""
 )
 
+# Stop if too many concert lookups failed.
+# This prevents a widespread service outage from
+# replacing our existing calendar with incomplete data.
+if failures > len(test_artists) * 0.20:
+    raise RuntimeError(
+        f"Concert lookup failed for {failures} "
+        f"of {len(test_artists)} artists. "
+        "Existing calendar will be preserved."
+    )
+
 with open("slc_concerts.json", "w") as file:
     json.dump(matches, file, indent=2)
 
