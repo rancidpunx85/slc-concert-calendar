@@ -6,11 +6,20 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: concert-calendar-pages
+  cancel-in-progress: false
 
 jobs:
   update-concerts:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Download project files
@@ -33,11 +42,27 @@ jobs:
       - name: Create Apple Calendar file
         run: python create_calendar.py
 
-      - name: Save calendar for inspection
-        uses: actions/upload-artifact@v4
+      - name: Check generated calendar
+        run: |
+          test -s slc_concerts.ics
+          test -s slc_concerts.json
+          python -c "import json; events=json.load(open('slc_concerts.json')); assert isinstance(events,list) and len(events)>0, 'No concerts found; refusing to replace published calendar'; print('Concerts ready:',len(events))"
+
+      - name: Prepare website
+        run: |
+          mkdir -p public
+          cp slc_concerts.ics public/
+          cp slc_concerts.json public/
+          touch public/.nojekyll
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: slc-concert-calendar
-          path: |
-            slc_concerts.ics
-            slc_concerts.json
-          if-no-files-found: error
+          path: public
+
+      - name: Publish concert calendar
+        id: deployment
+        uses: actions/deploy-pages@v4
