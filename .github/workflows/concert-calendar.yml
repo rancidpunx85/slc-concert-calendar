@@ -4,19 +4,40 @@ name: SLC Concert Calendar
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  test-setup:
+  update-concerts:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
+      - name: Download project files
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
-      - name: Check Spotify configuration
+      - name: Install Python libraries
+        run: pip install -r requirements.txt
+
+      - name: Find concerts
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-        run: |
-          python -c "import os; print('Spotify Client ID configured:', bool(os.getenv('SPOTIFY_CLIENT_ID')))"
-          echo "GitHub Actions is ready!"
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+        run: python concert_finder.py
+
+      - name: Create Apple Calendar file
+        run: python create_calendar.py
+
+      - name: Save calendar for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: slc-concert-calendar
+          path: |
+            slc_concerts.ics
+            slc_concerts.json
+          if-no-files-found: error
